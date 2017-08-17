@@ -76,10 +76,6 @@ def splitPlate(file,wells=None,smooth=None,smooththresh=None,diffthresh=None,eve
     if eventthresh is None:
         eventthresh = 100
 
-    rows = ['A','B','C','D','E','F','G','H']
-    cols = ['01','02','03','04','05','06','07','08','09','10','11','12']
-    plateraw = pd.DataFrame(index = rows, columns = cols)
-
     wholeFCS = FCMeasurement(ID = 'WholeTC', datafile = file) #read the file
     tdiff = wholeFCS.data.Time.diff() #Calculate the difference in time between events, proportional to event rate
     smoothtdiff = tdiff.rolling(window=smooth,center=True).mean() #smooth over 50 events
@@ -119,7 +115,11 @@ def splitPlate(file,wells=None,smooth=None,smooththresh=None,diffthresh=None,eve
     pDict = {('Plate '+ str(idx)): wholeFCS.data.loc[start:end] for (idx,start,end) in zip(range(len(start_events)),start_events,end_events)}
 
     # Now split the plate into individual wells
-    pDict_wells = {plate: plateraw for plate in pDict}
+    rows = ['A','B','C','D','E','F','G','H']
+    cols = ['01','02','03','04','05','06','07','08','09','10','11','12']
+    plateraw = pd.DataFrame(index = rows, columns = cols)
+
+    pDict_wells = pd.Panel({plate: plateraw for plate in pDict})
     verification = {plate: np.empty([wells,2]) for plate in pDict} #print start and stop times for wells to compare to Kieran's script
 
     for plate in pDict:
@@ -134,7 +134,7 @@ def splitPlate(file,wells=None,smooth=None,smooththresh=None,diffthresh=None,eve
 
         for ii in range(8):
             for jj in range(12):
-                pDict_wells[plate].set_value(rows[ii],cols[jj],pDict[plate][pDict[plate].Time.between(finebounds[ii*8+jj,0],finebounds[ii*8+jj,1],inclusive=True)]) #Take all the events between the bounds of each of the wells
+                pDict_wells.set_value(plate,rows[ii],cols[jj],pDict[plate][pDict[plate].Time.between(finebounds[ii*12+jj,0],finebounds[ii*12+jj,1],inclusive=True)]) #Take all the events between the bounds of each of the wells
         verification[plate] = finebounds
 
     return pDict_wells, verification
