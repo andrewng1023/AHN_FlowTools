@@ -16,10 +16,21 @@ def cleandata(array,thresh):
             array[i] = np.nan
     return array
 
-def FCdatastats(platesort,normalized,rows,cols,FITCthresh,SSCthresh):
+def FCdatastats(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SSCthresh=None):
 
     #Calculate the linear median, mean, and SD for each of the wells. Create two different Panels, one for FITC and one
     #for mCherry. In each Panel store a DataFrame containing the median, mean, SD, and CV
+
+    if normalized is None:
+        normalized = True
+    if rows is None:
+        rows = ['A','B','C','D','E','F','G','H']
+    if cols is None:
+        cols = ['01','02','03','04','05','06','07','08','09','10','11','12']
+    if FITCthresh is None:
+        FITCthresh = 100
+    if SSCthresh is None:
+        SSCthresh = 1000
 
     empty = pd.DataFrame(index = rows, columns = cols)
 
@@ -37,11 +48,11 @@ def FCdatastats(platesort,normalized,rows,cols,FITCthresh,SSCthresh):
                 continue
 
             try:
-                if normalized == 1:
+                if normalized == True:
                     FITC = FCM2['FITC-H']/FCM2['SSC-H']
                     mCherry = FCM2['mCherry-H']/FCM2['SSC-H']
 
-                elif normalized == 0:
+                elif normalized == False:
                     FITC = FCM2['FITC-H']
                     mCherry = FCM2['mCherry-H']
 
@@ -90,7 +101,7 @@ def splitPlate(file,wells=None,smooth=None,smooththresh=None,diffthresh=None,eve
 
     breakpointdiffs = wholeFCS.data.Time.loc[breakpoints].diff()/100 #find time between each of the breakpoints, in seconds
 
-    candidate_endinds = breakpointdiffs[wells*10 < breakpointdiffs] < wells*15 #find the breakpoint diffs that are longer than 10s per well and less than 15s per well
+    candidate_endinds = breakpointdiffs[30 < breakpointdiffs] #find the breakpoint diffs that are longer than 10s per well and less than 15s per well
 
     candidate_ends = list()
     for ind in candidate_endinds.index:
@@ -112,7 +123,7 @@ def splitPlate(file,wells=None,smooth=None,smooththresh=None,diffthresh=None,eve
     start_events = breakpointdiffs.index[candidate_starts]
     end_events = breakpointdiffs.index[candidate_ends]
 
-    pDict = {('Plate '+ str(idx)): wholeFCS.data.loc[start:end] for (idx,start,end) in zip(range(len(start_events)),start_events,end_events)}
+    pDict = {('Plate'+ str(idx)): wholeFCS.data.loc[start:end] for (idx,start,end) in zip(range(len(start_events)),start_events,end_events)}
 
     # Now split the plate into individual wells
     rows = ['A','B','C','D','E','F','G','H']
@@ -138,3 +149,63 @@ def splitPlate(file,wells=None,smooth=None,smooththresh=None,diffthresh=None,eve
         verification[plate] = finebounds
 
     return pDict_wells, verification
+
+def statsTC(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SSCthresh=None):
+
+    def gateTC(wellDF,gatedata,minimum):
+        try:
+            FCMgate = wellDF[wellDF[gatedata] > minimum]
+            return FCMgate
+        except AttributeError:
+            return np.nan
+
+    if normalized is None:
+        normalized = True
+    if rows is None:
+        rows = ['A','B','C','D','E','F','G','H']
+    if cols is None:
+        cols = ['01','02','03','04','05','06','07','08','09','10','11','12']
+    if FITCthresh is None:
+        FITCthresh = 100
+    if SSCthresh is None:
+        SSCthresh = 1000
+
+    empty = pd.DataFrame(index = rows, columns = cols)
+
+    FITCstats = pd.Panel({'raw':empty, 'med':empty, 'avg':empty, 'sd':empty, 'cv':empty})
+    mCherrystats = pd.Panel({'raw':empty, 'med':empty, 'avg':empty, 'sd':empty,'cv':empty})
+
+    for row in rows:
+        for col in cols:
+
+            try:
+                FCM = gateTC(platesort.loc[row,col],'FITC-H',FITCthresh)
+
+                FCM2 = FCM[FCM['SSC-H'] > SSCthresh]
+            except TypeError:
+                continue
+
+            try:
+                if normalized == True:
+                    FITC = FCM2['FITC-H']/FCM2['SSC-H']
+                    mCherry = FCM2['mCherry-H']/FCM2['SSC-H']
+
+                elif normalized == False:
+                    FITC = FCM2['FITC-H']
+                    mCherry = FCM2['mCherry-H']
+
+                FITCstats.raw.set_value(row, col, FITC)
+                FITCstats.med.set_value(row,col,FITC.median(axis=0))
+                FITCstats.avg.set_value(row,col,FITC.mean(axis=0))
+                FITCstats.sd.set_value(row,col,FITC.std(axis=0))
+                FITCstats.cv.set_value(row,col,FITCstats.avg.loc[row,col]/FITCstats.sd.loc[row,col])
+
+                mCherrystats.raw.set_value(row, col, mCherry)
+                mCherrystats.med.set_value(row,col,mCherry.median(axis=0))
+                mCherrystats.avg.set_value(row,col,mCherry.mean(axis=0))
+                mCherrystats.sd.set_value(row,col,mCherry.std(axis=0))
+                mCherrystats.cv.set_value(row,col,mCherrystats.avg.loc[row,col]/mCherrystats.sd.loc[row,col])
+
+            except (AttributeError, TypeError):
+                continue
+    return [FITCstats, mCherrystats]
