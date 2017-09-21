@@ -190,3 +190,42 @@ def statsTC(platesort,
             except (AttributeError, TypeError):
                 continue
     return [FITCstats, mCherrystats]
+
+def view_or_input_exp_design(data_index):
+    view_or_input = input("print out list (1) or add wells one by one (2)")
+    if view_or_input ==1: 
+        for jj in range(0,len(data_index.labels[0])):
+            levels = data_index.levels
+            labels = data_index.labels
+            condition_description = []
+            for kk in range(0,len(labels)): 
+                condition_description.append(levels[kk][labels[kk][jj]])    
+            print(condition_description)
+        return
+    elif view_or_input == 2: 
+        print "this is not set up for flow cytometry tools yet - it is set up for plate reader tools instead" 
+        return
+    #     class BreakIt(Exception): pass
+    # 
+    #     try:     
+    #         well_list = []
+    #         for jj in range(0,len(data_index.labels[0])):
+    #             input_accepted = "0" 
+    #             while input_accepted=="0":
+    #                 levels = data_index.levels
+    #                 labels = data_index.labels
+    #                 condition_description = []
+    #                 for kk in range(0,len(labels)): 
+    #                     condition_description.append(levels[kk][labels[kk][jj]])    
+    #                 new_well = input("input well for " + str(condition_description) + " : ")
+    #                 input_accepted = input("correct well: " + new_well + "? 1=Yes, 0 = No, exit = break loop")
+    #                 if input_accepted =="exit":
+    #                     print("exiting loop")
+    #                     raise BreakIt
+    #             well_list.append(new_well)
+    #             print(well_list)
+    #     except BreakIt:
+    #         pass  
+    #     return well_list  
+    else: 
+        print("Didn't pick 1 or 2")
