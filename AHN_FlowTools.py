@@ -16,21 +16,14 @@ def cleandata(array,thresh):
             array[i] = np.nan
     return array
 
-def FCdatastats(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SSCthresh=None):
+def FCdatastats(platesort,normalized=True,
+                rows = ['A','B','C','D','E','F','G','H'],
+                cols = ['01','02','03','04','05','06','07','08','09','10','11','12'],
+                FITCthresh=100,
+                SSCthresh=1000):
 
     #Calculate the linear median, mean, and SD for each of the wells. Create two different Panels, one for FITC and one
     #for mCherry. In each Panel store a DataFrame containing the median, mean, SD, and CV
-
-    if normalized is None:
-        normalized = True
-    if rows is None:
-        rows = ['A','B','C','D','E','F','G','H']
-    if cols is None:
-        cols = ['01','02','03','04','05','06','07','08','09','10','11','12']
-    if FITCthresh is None:
-        FITCthresh = 100
-    if SSCthresh is None:
-        SSCthresh = 1000
 
     empty = pd.DataFrame(index = rows, columns = cols)
 
@@ -74,18 +67,12 @@ def FCdatastats(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SS
     return [FITCstats, mCherrystats]
 
 
-def splitPlate(file,wells=None,smooth=None,smooththresh=None,diffthresh=None,eventthresh=None):
-
-    if wells is None:
-        wells = 96
-    if smooth is None:
-        smooth = 50
-    if smooththresh is None:
-        smooththresh = 50
-    if diffthresh is None:
-        diffthresh = 50
-    if eventthresh is None:
-        eventthresh = 100
+def splitPlate(file,
+               wells=96,
+               smooth=50,
+               smooththresh=50,
+               diffthresh=50,
+               eventthresh=100):
 
     wholeFCS = FCMeasurement(ID = 'WholeTC', datafile = file) #read the file
     tdiff = wholeFCS.data.Time.diff() #Calculate the difference in time between events, proportional to event rate
@@ -150,7 +137,12 @@ def splitPlate(file,wells=None,smooth=None,smooththresh=None,diffthresh=None,eve
 
     return pDict_wells, verification
 
-def statsTC(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SSCthresh=None):
+def statsTC(platesort,
+            normalized=True,
+            rows=['A','B','C','D','E','F','G','H'],
+            cols=['01','02','03','04','05','06','07','08','09','10','11','12'],
+            FITCthresh=100,
+            SSCthresh=1000):
 
     def gateTC(wellDF,gatedata,minimum):
         try:
@@ -158,17 +150,6 @@ def statsTC(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SSCthr
             return FCMgate
         except AttributeError:
             return np.nan
-
-    if normalized is None:
-        normalized = True
-    if rows is None:
-        rows = ['A','B','C','D','E','F','G','H']
-    if cols is None:
-        cols = ['01','02','03','04','05','06','07','08','09','10','11','12']
-    if FITCthresh is None:
-        FITCthresh = 100
-    if SSCthresh is None:
-        SSCthresh = 1000
 
     empty = pd.DataFrame(index = rows, columns = cols)
 
