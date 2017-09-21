@@ -34,14 +34,21 @@ def FCdatastats(platesort,normalized=True,
         for col in cols:
 
             try:
+                #gate data based on a minimum FITC Threshold
                 FCM = gate(platesort.loc[row,col],'FITC-H',FITCthresh)
 
+                #gate data based on a minimum SSC threshold 
+                #? Why doesn't this use the norm function - it looks like FCM2 doesn't have a field called .data like platesort.loc[row,col] does comparing the syntax 
                 FCM2 = FCM[FCM['SSC-H'] > SSCthresh]
-            except TypeError:
+
+            except TypeError as e:
+                print("Data for row " + row + " and column " + col + " is " + str(platesort.loc[row,col]) +
+                      " occurred during FITC-H gating.  Either that well in the FITC-H channel on one of your plates has no data or if it is true for all wells, your filenames may be wrong.")
                 continue
 
             try:
                 if normalized == True:
+                    #normalize data by SSC-H"
                     FITC = FCM2['FITC-H']/FCM2['SSC-H']
                     mCherry = FCM2['mCherry-H']/FCM2['SSC-H']
 
@@ -61,7 +68,8 @@ def FCdatastats(platesort,normalized=True,
                 mCherrystats.sd.set_value(row,col,mCherry.std(axis=0))
                 mCherrystats.cv.set_value(row,col,mCherrystats.avg.loc[row,col]/mCherrystats.sd.loc[row,col])
 
-            except (AttributeError, TypeError):
+            except (AttributeError, TypeError) as e:
+                print(e) 
                 continue
 
     return [FITCstats, mCherrystats]
