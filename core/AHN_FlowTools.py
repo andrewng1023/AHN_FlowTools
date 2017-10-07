@@ -16,21 +16,14 @@ def cleandata(array,thresh):
             array[i] = np.nan
     return array
 
-def FCdatastats(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SSCthresh=None):
+def FCdatastats(platesort,normalized=True,
+                rows = ['A','B','C','D','E','F','G','H'],
+                cols = ['01','02','03','04','05','06','07','08','09','10','11','12'],
+                FITCthresh=100,
+                SSCthresh=1000):
 
     #Calculate the linear median, mean, and SD for each of the wells. Create two different Panels, one for FITC and one
     #for mCherry. In each Panel store a DataFrame containing the median, mean, SD, and CV
-
-    if normalized is None:
-        normalized = True
-    if rows is None:
-        rows = ['A','B','C','D','E','F','G','H']
-    if cols is None:
-        cols = ['01','02','03','04','05','06','07','08','09','10','11','12']
-    if FITCthresh is None:
-        FITCthresh = 100
-    if SSCthresh is None:
-        SSCthresh = 1000
 
     empty = pd.DataFrame(index = rows, columns = cols)
 
@@ -41,14 +34,21 @@ def FCdatastats(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SS
         for col in cols:
 
             try:
+                #gate data based on a minimum FITC Threshold
                 FCM = gate(platesort.loc[row,col],'FITC-H',FITCthresh)
 
+                #gate data based on a minimum SSC threshold 
+                #? Why doesn't this use the norm function - it looks like FCM2 doesn't have a field called .data like platesort.loc[row,col] does comparing the syntax 
                 FCM2 = FCM[FCM['SSC-H'] > SSCthresh]
-            except TypeError:
+
+            except TypeError as e:
+                print("Data for row " + row + " and column " + col + " is " + str(platesort.loc[row,col]) +
+                      " occurred during FITC-H gating.  Either that well in the FITC-H channel on one of your plates has no data or if it is true for all wells, your filenames may be wrong.")
                 continue
 
             try:
                 if normalized == True:
+                    #normalize data by SSC-H"
                     FITC = FCM2['FITC-H']/FCM2['SSC-H']
                     mCherry = FCM2['mCherry-H']/FCM2['SSC-H']
 
@@ -68,24 +68,19 @@ def FCdatastats(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SS
                 mCherrystats.sd.set_value(row,col,mCherry.std(axis=0))
                 mCherrystats.cv.set_value(row,col,mCherrystats.avg.loc[row,col]/mCherrystats.sd.loc[row,col])
 
-            except (AttributeError, TypeError):
+            except (AttributeError, TypeError) as e:
+                print(e) 
                 continue
 
     return [FITCstats, mCherrystats]
 
 
-def splitPlate(file,wells=None,smooth=None,smooththresh=None,diffthresh=None,eventthresh=None):
-
-    if wells is None:
-        wells = 96
-    if smooth is None:
-        smooth = 50
-    if smooththresh is None:
-        smooththresh = 50
-    if diffthresh is None:
-        diffthresh = 50
-    if eventthresh is None:
-        eventthresh = 100
+def splitPlate(file,
+               wells=96,
+               smooth=50,
+               smooththresh=50,
+               diffthresh=50,
+               eventthresh=100):
 
     wholeFCS = FCMeasurement(ID = 'WholeTC', datafile = file) #read the file
     tdiff = wholeFCS.data.Time.diff() #Calculate the difference in time between events, proportional to event rate
@@ -150,7 +145,12 @@ def splitPlate(file,wells=None,smooth=None,smooththresh=None,diffthresh=None,eve
 
     return pDict_wells, verification
 
-def statsTC(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SSCthresh=None):
+def statsTC(platesort,
+            normalized=True,
+            rows=['A','B','C','D','E','F','G','H'],
+            cols=['01','02','03','04','05','06','07','08','09','10','11','12'],
+            FITCthresh=100,
+            SSCthresh=1000):
 
     def gateTC(wellDF,gatedata,minimum):
         try:
@@ -158,17 +158,6 @@ def statsTC(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SSCthr
             return FCMgate
         except AttributeError:
             return np.nan
-
-    if normalized is None:
-        normalized = True
-    if rows is None:
-        rows = ['A','B','C','D','E','F','G','H']
-    if cols is None:
-        cols = ['01','02','03','04','05','06','07','08','09','10','11','12']
-    if FITCthresh is None:
-        FITCthresh = 100
-    if SSCthresh is None:
-        SSCthresh = 1000
 
     empty = pd.DataFrame(index = rows, columns = cols)
 
@@ -209,3 +198,42 @@ def statsTC(platesort,normalized=None,rows=None,cols=None,FITCthresh=None,SSCthr
             except (AttributeError, TypeError):
                 continue
     return [FITCstats, mCherrystats]
+
+def view_or_input_exp_design(data_index):
+    view_or_input = input("print out list (1) or add wells one by one (2)")
+    if view_or_input ==1: 
+        for jj in range(0,len(data_index.labels[0])):
+            levels = data_index.levels
+            labels = data_index.labels
+            condition_description = []
+            for kk in range(0,len(labels)): 
+                condition_description.append(levels[kk][labels[kk][jj]])    
+            print(condition_description)
+        return
+    elif view_or_input == 2: 
+        print "this is not set up for flow cytometry tools yet - it is set up for plate reader tools instead" 
+        return
+    #     class BreakIt(Exception): pass
+    # 
+    #     try:     
+    #         well_list = []
+    #         for jj in range(0,len(data_index.labels[0])):
+    #             input_accepted = "0" 
+    #             while input_accepted=="0":
+    #                 levels = data_index.levels
+    #                 labels = data_index.labels
+    #                 condition_description = []
+    #                 for kk in range(0,len(labels)): 
+    #                     condition_description.append(levels[kk][labels[kk][jj]])    
+    #                 new_well = input("input well for " + str(condition_description) + " : ")
+    #                 input_accepted = input("correct well: " + new_well + "? 1=Yes, 0 = No, exit = break loop")
+    #                 if input_accepted =="exit":
+    #                     print("exiting loop")
+    #                     raise BreakIt
+    #             well_list.append(new_well)
+    #             print(well_list)
+    #     except BreakIt:
+    #         pass  
+    #     return well_list  
+    else: 
+        print("Didn't pick 1 or 2")
